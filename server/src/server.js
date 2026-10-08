@@ -1,9 +1,12 @@
 import dotenv from "dotenv";
+// DOTENV CONFIG
+dotenv.config();
+
+
 import app from './app.js'
 import connectDB from "./config/db.js";
 
-// DOTENV CONFIG
-dotenv.config();
+
 
 
 // DEFINE PORT 

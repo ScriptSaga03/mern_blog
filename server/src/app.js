@@ -6,9 +6,10 @@ import morgan from "morgan";
 // IMPORT MIDDLEWARE
 import { centralizedErrorHandler } from "./middleware/errorHandler.js";
 import { pageNotFound } from "./middleware/unmatchedRouteHandler.js";
-import authRoutes from "./routes/auth.routes.js";
+
 
 // IMPORT FILES
+import authRoutes from "./routes/auth.routes.js";
 
 // CREATE EXPRESS APP
 const app = express();

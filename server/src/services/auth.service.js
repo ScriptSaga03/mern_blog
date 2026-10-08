@@ -1,38 +1,70 @@
 import bcrypt from "bcryptjs";
 import User from "../model/user.model.js";
 import AppError from "../utils/AppError.js";
+import {generateToken} from "../utils/generateToken.js"
 
 const registerUser = async (userData) => {
   const { name, email, password } = userData;
 
-  // CHECK USER ALREADY EXIST
+  // 1 CHECK USER ALREADY EXIST
   const existingUser = await User.findOne({ email }).lean();
   if (existingUser) {
     throw AppError(409, "User with this email already exists!");
   }
 
-  //   Salt
+  // 2 GENERATE SALT
   const salt = await bcrypt.genSalt(12);
-  //   HASH PASSWORD
+  // 3 HASH PASSWORD
   const hashedPassword = await bcrypt.hash(password, salt);
-  // CREATE NEW USER
+  // 4 CREATE NEW USER
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
   });
 
-  // SENETIZE RETURN OBJ
+  // 5 SENETIZE RETURN OBJ
   const userResponse = user.toObject();
   //   REMOVE PASSWORD FROM RESPONSE
   delete userResponse.password;
 
-  //   RETURN USER
+  // 6 RETURN USER
   return userResponse;
 };
 
+// ======================= Login Services =======================
+const loginUser = async (userData) => {
+  const { email, password } = userData;
+
+  // 1 FETCH USER
+  const user = await User.findOne({ email }).select("+password").lean();
+  if (!user) {
+    throw AppError(401, "Invalid email or password!");
+  }
+
+  // 2 COMPARE PASSWORD
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw AppError(401, "Invalid email or password!");
+  }
+
+  // 3 GENERATE JWT
+  const token = generateToken(user)
+
+  // Return LOGIN DATA
+  return {
+    user:{
+      userId: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+    token
+  };
+};
+
 // EXPORT
-export { registerUser };
+export { registerUser, loginUser };
 
 // IMPORTANT
 /*

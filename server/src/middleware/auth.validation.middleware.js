@@ -4,6 +4,7 @@ import { validationResult } from "express-validator";
 export const validationMiddleware = (req, res, next) => {
   const errors = validationResult(req);
 
+  console.log(errors.array({onlyFirstError: true}));
   if (!errors.isEmpty()) {
     const extractedErrors = errors
       .array({ onlyFirstError: true })
