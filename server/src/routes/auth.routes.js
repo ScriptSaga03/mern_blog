@@ -3,7 +3,7 @@
 import express from 'express';
 import { register, login, getMe, adminTest } from '../controllers/auth.controller.js';
 import { loginValidationRules, registerValidationRules as registerValidation } from '../validators/auth.validator.js';
-import {validationMiddleware} from '../middleware/auth.validation.middleware.js'
+import {validationMiddleware} from '../middleware/validation.middleware.js'
 import { isAuthenticatedUser} from '../middleware/isAuthenticatedUser.middleware.js';
 import authorizedRole from '../middleware/isAuthorizedRole.middleware.js';
 

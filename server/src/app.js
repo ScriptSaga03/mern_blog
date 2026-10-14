@@ -10,6 +10,7 @@ import { pageNotFound } from "./middleware/unmatchedRouteHandler.js";
 
 // IMPORT FILES
 import authRoutes from "./routes/auth.routes.js";
+import postRoutes from '../src/routes/post.routes.js'
 
 // CREATE EXPRESS APP
 const app = express();
@@ -31,6 +32,7 @@ app.get("/", (req, res) => {
 // AUTH ROUTES
 app.use("/api/v1/auth", authRoutes);
 // BLOG ROUTES
+app.use("/api/v1/posts", postRoutes);
 
 // PAGE NOT FOUND -> UNMATCHED ROUTE HANDLER
 app.use(pageNotFound);
