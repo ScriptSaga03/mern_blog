@@ -3,29 +3,34 @@ import AppError from "../utils/AppError.js";
 
 // GET POSTS
 const getPublishedPosts = async () => {
-  const posts = await Post.find({ status: "published" }).sort({
-    createdAt: -1,
-  });
+  const posts = await Post.find({ status: "published" })
+    .sort({
+      createdAt: -1,
+    })
+    .select("-__v")
+    .lean();
 
   return posts;
 };
 
-// GET SINGLE POST BY ID
-const getPublishedPostById = async (postId) => {
-  const post = await Post.findOne({
-    _id: postId,
-    status: "published",
-  });
-  if (!post) {
-    throw AppError(404, "Published post not found!");
-  }
+  // GET SINGLE POST BY ID
+  const getPublishedPostById = async (postId) => {
+    const post = await Post.findOne({
+      _id: postId,
+      status: "published",
+    })
+      .select("-__v -status -createdAt -updatedAt")
+      .lean();
+    if (!post) {
+      throw AppError(404, "Published post not found!");
+    }
 
-  return post;
-};
+    return post;
+  };
 
 // PUBLISH POST
-const publishPosts = async (postId) => {
-  const post = await Post.findById(postId);
+const publishPosts = async (postId, userId) => {
+  const post = await Post.findOne({ _id: postId, author: userId });
   if (!post) {
     throw AppError(404, "Post not found!");
   }
@@ -57,18 +62,30 @@ const createPost = async (postData, authorId) => {
 };
 
 // UPDATE POST
-const updatePostsById = async (postId, postData) => {
-  const post = await Post.findById(postId);
+const updatePostsById = async (postId, userId, postData) => {
+  const post = await Post.findOneAndUpdate(
+    { _id: postId, author: userId },
+    postData,
+    {
+      new: true,
+      runValidators: true,
+      returnDocument:"after"
+    },
+  )
+    .select("-__v")
+    .lean();
+
   if (!post) {
-    throw AppError(404, "Post not found to update.");
+    throw AppError(404, "Post not found!");
   }
 
-  const updatedPost = await Post.findByIdAndUpdate(postId, postData, {
-    new: true,
-    returnDocument: "after",
-  });
-
-  return updatedPost;
+  return post;
 };
 
-export { createPost, getPublishedPosts, publishPosts, getPublishedPostById ,updatePostsById };
+export {
+  createPost,
+  getPublishedPosts,
+  publishPosts,
+  getPublishedPostById,
+  updatePostsById,
+};

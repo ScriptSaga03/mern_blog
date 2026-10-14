@@ -36,7 +36,7 @@ const getPublishedPostByIdController = asyncHandler(async (req, res) => {
 
 // PUBLISH POST
 const publishPostController = asyncHandler(async (req, res) => {
-  const post = await publishPosts(req.params.id);
+  const post = await publishPosts(req.params.id, req.user._id);
 
   return res.status(200).json({
     success: true,
@@ -60,24 +60,23 @@ const createPostController = asyncHandler(async (req, res) => {
   });
 });
 
-
-// UPDATE POST CONTROLLER 
-const updatePostsByIdController = asyncHandler (async (req, res) => {
-  const post = await updatePostsById(req.params.id, req.body);
+// UPDATE POST CONTROLLER
+const updatePostsByIdController = asyncHandler(async (req, res) => {
+  const post = await updatePostsById(req.params.id, req.user._id, req.body);
 
   return res.status(201).json({
-    success:true,
-    message:"Post updated successfully.",
-    data:{
-      post
-    }
-  })
-})
+    success: true,
+    message: "Post updated successfully.",
+    data: {
+      post,
+    },
+  });
+});
 
 export {
   createPostController,
   getPublishedPostsController,
   publishPostController,
   getPublishedPostByIdController,
-  updatePostsByIdController
+  updatePostsByIdController,
 };

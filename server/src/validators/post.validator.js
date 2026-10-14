@@ -52,10 +52,12 @@ const updatePostValidationRules = [
     .withMessage("Invalid Post ID format."),
 
   // AT LEAST ONE FIELD
+  // AT LEAST ONE FIELD
   body().custom((val, { req }) => {
     if (Object.keys(req.body).length === 0) {
       throw new Error("At least one field is required for update.");
     }
+    return true;
   }),
   body("title")
     .optional()
