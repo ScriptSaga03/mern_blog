@@ -36,10 +36,10 @@ const createPostValidationRules = [
     .notEmpty()
     .withMessage("Tags cannot be empty."),
 
-  body("status")
-    .optional()
-    .isIn(["draft", "published"])
-    .withMessage("Status must be draft or published."),
+  // body("status")
+  //   .optional()
+  //   .isIn(["draft", "published"])
+  //   .withMessage("Status must be draft or published."),
 ];
 
 // UPATE POST VALIDATION RULES
@@ -52,13 +52,34 @@ const updatePostValidationRules = [
     .withMessage("Invalid Post ID format."),
 
   // AT LEAST ONE FIELD
-  // AT LEAST ONE FIELD
   body().custom((val, { req }) => {
+    const allowedFields = [
+      "title",
+      "content",
+      "excerpt",
+      "coverImage",
+      "category",
+      "tags",
+    ];
+
+    const receivedFields = Object.keys(req.body);
+    const unknownFields = receivedFields.filter(
+      (field) => !allowedFields.includes(field),
+    );
+
+    if (unknownFields.length > 0) {
+      throw new Error(
+        `These fields cannot be updated: ${unknownFields.join(", ")}`,
+      );
+    }
+
     if (Object.keys(req.body).length === 0) {
       throw new Error("At least one field is required for update.");
     }
+
     return true;
   }),
+
   body("title")
     .optional()
     .trim()
@@ -104,6 +125,7 @@ const updatePostValidationRules = [
     .withMessage("Tags cannot be empty."),
 ];
 
+
 // POST ID VALIDATION RULES
 const postIdValidationRules = [
   param("id").isMongoId().withMessage("Invalid post ID."),
@@ -113,4 +135,5 @@ export {
   createPostValidationRules,
   postIdValidationRules,
   updatePostValidationRules,
+  deletePostValidationRules,
 };

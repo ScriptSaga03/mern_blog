@@ -1,10 +1,12 @@
-
 import { validationResult } from "express-validator";
 
 export const validationMiddleware = (req, res, next) => {
   const errors = validationResult(req);
 
-  console.log(errors.array({onlyFirstError: true}));
+  if (errors.isEmpty()) {
+    return next();
+  }
+
   if (!errors.isEmpty()) {
     const extractedErrors = errors
       .array({ onlyFirstError: true })
@@ -20,7 +22,7 @@ export const validationMiddleware = (req, res, next) => {
       status: "Fail",
       statusCode: 400,
       message: "Validation failed.",
-      errors:extractedErrors
+      errors: extractedErrors,
     });
   }
   return next();

@@ -13,29 +13,29 @@ const getPublishedPosts = async () => {
   return posts;
 };
 
-  // GET SINGLE POST BY ID
-  const getPublishedPostById = async (postId) => {
-    const post = await Post.findOne({
-      _id: postId,
-      status: "published",
-    })
-      .select("-__v -createdAt -updatedAt")
-      .lean();
-    if (!post) {
-      throw AppError(404, "Published post not found!");
-    }
+// GET SINGLE POST BY ID
+const getPublishedPostById = async (postId) => {
+  const post = await Post.findOne({
+    _id: postId,
+    status: "published",
+  })
+    .select("-__v -createdAt -updatedAt")
+    .lean();
+  if (!post) {
+    throw AppError(404, "Published post not found!");
+  }
 
-    return post;
-  };
+  return post;
+};
 
 // PUBLISH POST
-const publishPosts = async (postId, userId) => {
-  const post = await Post.findOne({ _id: postId, author: userId }).select("-__v -createdAt -updatedAt");
+const publishPosts = async (postId) => {
+  const post = await Post.findById(postId).select("-__v -createdAt -updatedAt");
   if (!post) {
     throw AppError(404, "Post not found!");
   }
 
-  if( post.status === "published") {
+  if (post.status === "published") {
     throw AppError(400, "Post is already published!");
   }
 
@@ -66,21 +66,58 @@ const createPost = async (postData, authorId) => {
 };
 
 // UPDATE POST
-const updatePostsById = async (postId, userId, postData) => {
-  const post = await Post.findOneAndUpdate(
-    { _id: postId, author: userId },
-    postData,
+const updatePostsById = async (postId, postData) => {
+  // 1. Only allow these fields to be updated
+  const allowedFields = [
+    "title",
+    "content",
+    "excerpt",
+    "coverImage",
+    "category",
+    "tags",
+  ];
+
+  // 2. Pick only allowed fields from client input
+  const updateData = {};
+  for (const field of allowedFields) {
+    if (Object.hasOwn(postData, field)) {
+      updateData[field] = postData[field];
+    }
+  }
+
+  
+
+  // 3. Reject requests containing no allowed fields
+  if (Object.keys(updateData).length === 0) {
+    throw AppError(400, "No valid fields provided for update.");
+  }
+
+  // 4. Update the post with only allowed fields
+  const post = await Post.findByIdAndUpdate(
+    postId,
+    { $set: updateData },
     {
       new: true,
       runValidators: true,
-      returnDocument:"after"
     },
   )
     .select("-__v -createdAt -updatedAt")
     .lean();
 
+  // Handle case where post is not found
   if (!post) {
     throw AppError(404, "Post not found!");
+  }
+
+  return post;
+};
+
+// DELETE POST
+const deletePostById = async (postId) => {
+  const post = await Post.findByIdAndDelete(postId);
+
+  if (!post) {
+    throw AppError(404, "Post not found.");
   }
 
   return post;
@@ -92,4 +129,5 @@ export {
   publishPosts,
   getPublishedPostById,
   updatePostsById,
+  deletePostById,
 };

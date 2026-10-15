@@ -5,6 +5,7 @@ import {
   publishPosts,
   getPublishedPostById,
   updatePostsById,
+  deletePostById,
 } from "../services/post.service.js";
 
 // GET POSTS
@@ -34,9 +35,11 @@ const getPublishedPostByIdController = asyncHandler(async (req, res) => {
   });
 });
 
+
+
 // PUBLISH POST
 const publishPostController = asyncHandler(async (req, res) => {
-  const post = await publishPosts(req.params.id, req.user._id);
+  const post = await publishPosts(req.params.id);
 
   return res.status(200).json({
     success: true,
@@ -46,6 +49,8 @@ const publishPostController = asyncHandler(async (req, res) => {
     },
   });
 });
+
+
 
 // CREATE POSTS
 const createPostController = asyncHandler(async (req, res) => {
@@ -62,9 +67,9 @@ const createPostController = asyncHandler(async (req, res) => {
 
 // UPDATE POST CONTROLLER
 const updatePostsByIdController = asyncHandler(async (req, res) => {
-  const post = await updatePostsById(req.params.id, req.user._id, req.body);
+  const post = await updatePostsById(req.params.id, req.body);
 
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
     message: "Post updated successfully.",
     data: {
@@ -73,10 +78,23 @@ const updatePostsByIdController = asyncHandler(async (req, res) => {
   });
 });
 
+
+
+// DELETE POST BY ID
+const deletePostByIdController  = asyncHandler(async (req, res) => {
+   await deletePostById(req.params.id)
+
+  return res.status(200).json({
+    success:true, 
+    message:"Post delete successfully."
+  })
+}) 
+
 export {
   createPostController,
   getPublishedPostsController,
   publishPostController,
   getPublishedPostByIdController,
   updatePostsByIdController,
+  deletePostByIdController
 };
