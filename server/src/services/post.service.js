@@ -7,7 +7,7 @@ const getPublishedPosts = async () => {
     .sort({
       createdAt: -1,
     })
-    .select("-__v")
+    .select("-__v -createdAt -updatedAt")
     .lean();
 
   return posts;
@@ -19,7 +19,7 @@ const getPublishedPosts = async () => {
       _id: postId,
       status: "published",
     })
-      .select("-__v -status -createdAt -updatedAt")
+      .select("-__v -createdAt -updatedAt")
       .lean();
     if (!post) {
       throw AppError(404, "Published post not found!");
@@ -30,9 +30,13 @@ const getPublishedPosts = async () => {
 
 // PUBLISH POST
 const publishPosts = async (postId, userId) => {
-  const post = await Post.findOne({ _id: postId, author: userId });
+  const post = await Post.findOne({ _id: postId, author: userId }).select("-__v -createdAt -updatedAt");
   if (!post) {
     throw AppError(404, "Post not found!");
+  }
+
+  if( post.status === "published") {
+    throw AppError(400, "Post is already published!");
   }
 
   post.status = "published";
@@ -72,7 +76,7 @@ const updatePostsById = async (postId, userId, postData) => {
       returnDocument:"after"
     },
   )
-    .select("-__v")
+    .select("-__v -createdAt -updatedAt")
     .lean();
 
   if (!post) {
