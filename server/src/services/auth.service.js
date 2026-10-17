@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../model/user.model.js";
 import AppError from "../utils/AppError.js";
-import {generateToken} from "../utils/generateToken.js"
+import { generateToken } from "../utils/generateToken.js";
 
 const registerUser = async (userData) => {
   const { name, email, password } = userData;
@@ -17,13 +17,21 @@ const registerUser = async (userData) => {
   // 3 HASH PASSWORD
   const hashedPassword = await bcrypt.hash(password, salt);
   // 4 CREATE NEW USER
-  const user = await User.create({
-    name,
-    email,
-    password: hashedPassword,
-  });
+  let user;
+  try {
+    user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      throw AppError(409, "User with this email already exists!");
+    }
+    throw error;
+  }
 
-  // 5 SENETIZE RETURN OBJ
+  // 5 SANITIZE RETURN OBJ
   const userResponse = user.toObject();
   //   REMOVE PASSWORD FROM RESPONSE
   delete userResponse.password;
@@ -49,17 +57,17 @@ const loginUser = async (userData) => {
   }
 
   // 3 GENERATE JWT
-  const token = generateToken(user)
+  const token = generateToken(user);
 
   // Return LOGIN DATA
   return {
-    user:{
+    user: {
       userId: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
     },
-    token
+    token,
   };
 };
 

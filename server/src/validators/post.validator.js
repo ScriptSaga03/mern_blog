@@ -8,7 +8,13 @@ const createPostValidationRules = [
     .bail()
     .isLength({ min: 5, max: 120 })
     .withMessage("Title must be between 5 and 120 characters."),
-  body("content").trim().notEmpty().withMessage("Content is required."),
+  body("content")
+    .isString()
+    .withMessage("Content must be a string.")
+    .bail()
+    .trim()
+    .notEmpty()
+    .withMessage("Content is required."),
   body("excerpt")
     .optional()
     .trim()
@@ -20,6 +26,9 @@ const createPostValidationRules = [
     .isURL({ require_protocol: true })
     .withMessage("Cover image must be a valid URL."),
   body("category")
+    .isString()
+    .withMessage("Category must be a string.")
+    .bail()
     .trim()
     .notEmpty()
     .withMessage("Category is required.")
@@ -125,7 +134,6 @@ const updatePostValidationRules = [
     .withMessage("Tags cannot be empty."),
 ];
 
-
 // POST ID VALIDATION RULES
 const postIdValidationRules = [
   param("id").isMongoId().withMessage("Invalid post ID."),
@@ -135,5 +143,4 @@ export {
   createPostValidationRules,
   postIdValidationRules,
   updatePostValidationRules,
-  deletePostValidationRules,
 };
