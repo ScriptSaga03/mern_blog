@@ -6,6 +6,7 @@ import {
   getPublishedPostByIdController,
   getPublishedPostsController,
   publishPostController,
+  bulkCreatePostsController,
   updatePostsByIdController,
 } from "../controllers/post.controller.js";
 import { isAuthenticatedUser } from "../middleware/isAuthenticatedUser.middleware.js";
@@ -29,6 +30,16 @@ router.get(
   validationMiddleware,
   getPublishedPostByIdController,
 );
+
+
+
+router.post(
+  "/bulk-creation",
+  isAuthenticatedUser,
+  bulkCreatePostsController
+);
+
+
 
 // POST
 router.post(

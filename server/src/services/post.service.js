@@ -1,16 +1,64 @@
 import Post from "../model/post.model.js";
 import AppError from "../utils/AppError.js";
 
-// GET POSTS
-const getPublishedPosts = async () => {
-  const posts = await Post.find({ status: "published" })
-    .sort({
-      createdAt: -1,
-    })
-    .select("-__v -createdAt -updatedAt")
-    .lean();
+const bulkCreatePosts = async (postsData, authorId) => {
+  const postsWithAuthor = postsData.map((post) => ({
+    ...post,
+    author: authorId,
+  }));
+
+  const posts = await Post.insertMany(postsWithAuthor);
 
   return posts;
+};
+
+// GET POSTS
+const getPublishedPosts = async (query = {}) => {
+  const { page = 1, limit = 10 } = query;
+
+  // CONVERT STRING INTO NUMBER
+  const parsedPage = Number(page);
+  const parsedLimit = Number(limit);
+
+  // PAGE VALIDATE
+  const pageNumber =
+    Number.isFinite(parsedPage) && parsedPage >= 1 ? Math.floor(parsedPage) : 1;
+
+  // LIMIT VALIDATE
+  const limitNumber =
+    Number.isFinite(parsedLimit) && parsedLimit >= 1
+      ? Math.min(Math.floor(parsedLimit), 50)
+      : 10;
+
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const filter = { status: "published" };
+
+  const [posts, totalPosts] = await Promise.all([
+    Post.find(filter)
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(limitNumber)
+      .select("-__v")
+      .lean(),
+
+    Post.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalPosts / limitNumber);
+  return {
+    posts,
+    pagination: {
+      currentPage: pageNumber,
+      limit: limitNumber,
+      totalPosts,
+      totalPages,
+      hasNextPage: pageNumber < totalPages,
+      hasPrevPage: pageNumber > 1,
+    },
+  };
 };
 
 // GET SINGLE POST BY ID
@@ -85,8 +133,6 @@ const updatePostsById = async (postId, postData) => {
     }
   }
 
-  
-
   // 3. Reject requests containing no allowed fields
   if (Object.keys(updateData).length === 0) {
     throw AppError(400, "No valid fields provided for update.");
@@ -124,6 +170,7 @@ const deletePostById = async (postId) => {
 };
 
 export {
+  bulkCreatePosts,
   createPost,
   getPublishedPosts,
   publishPosts,
