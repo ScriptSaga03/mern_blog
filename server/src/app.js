@@ -2,6 +2,7 @@
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import cors from 'cors';
 
 // IMPORT MIDDLEWARE
 import { centralizedErrorHandler } from "./middleware/errorHandler.js";
@@ -14,6 +15,17 @@ import postRoutes from './routes/post.routes.js';
 
 // CREATE EXPRESS APP
 const app = express();
+
+// CORS Configuration
+app.use(
+  cors({
+    origin: "http://localhost:5173", // Sirf is frontend URL ko allow karega
+    methods: ["GET", "POST", "PUT", "DELETE"], // Yeh HTTP methods allowed hain
+    allowedHeaders: ["Content-Type", "Authorization"], // Yeh headers allowed hain
+    credentials: true, // Cookies ya authorization tokens pass karne ke liye zaroori hai
+  })
+);
+
 
 // GLOBAL LEVEL MIDDLEWARE
 app.use(helmet());

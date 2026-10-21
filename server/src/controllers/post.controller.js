@@ -37,8 +37,10 @@ const bulkCreatePostsController = asyncHandler(async (req, res) => {
 
 // GET POSTS
 const getPublishedPostsController = asyncHandler(async (req, res) => {
+  console.log(req.query)
   const result = await getPublishedPosts(req.query);
 
+  
   return res.status(200).json({
     success: true,
     message: "Published posts fetched successfully.",

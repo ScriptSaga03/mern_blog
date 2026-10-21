@@ -1,6 +1,7 @@
 import Post from "../model/post.model.js";
 import AppError from "../utils/AppError.js";
 
+// BULK CREATE POSTS
 const bulkCreatePosts = async (postsData, authorId) => {
   const postsWithAuthor = postsData.map((post) => ({
     ...post,
@@ -14,7 +15,7 @@ const bulkCreatePosts = async (postsData, authorId) => {
 
 // GET POSTS
 const getPublishedPosts = async (query = {}) => {
-  const { page = 1, limit = 10 } = query;
+  const { page = 1, limit = 10, category, search, sortBy = "createdAt", order="desc"} = query;
 
   // CONVERT STRING INTO NUMBER
   const parsedPage = Number(page);
@@ -34,10 +35,29 @@ const getPublishedPosts = async (query = {}) => {
 
   const filter = { status: "published" };
 
+  // SEARCH
+  const searchTerms = query.search ? query.search.trim() : null;
+  if (searchTerms) {
+    filter.$or = [
+      { title: { $regex: searchTerms, $options: "i" } },
+      { excerpt: { $regex: searchTerms, $options: "i" } },
+      { content: { $regex: searchTerms, $options: "i" } },
+    ];
+  }
+
+  // CATEGORY
+  if (category) {
+    filter.category = { $regex: category, $options: "i" };
+  }
+
+  // SORT SETUP 
+  const sortOrder  = order.toLowerCase() === "desc" ? -1 : 1;
+  
+
   const [posts, totalPosts] = await Promise.all([
     Post.find(filter)
       .sort({
-        createdAt: -1,
+        [sortBy]: sortOrder
       })
       .skip(skip)
       .limit(limitNumber)
@@ -178,3 +198,54 @@ export {
   updatePostsById,
   deletePostById,
 };
+
+/*
+
+
+If you want to validate the pagination parameters more strictly, you can create a utility function to handle this. Here's an example of how you might implement such a function:
+
+const parsePaginationParam = (value, field, defaultValue, max) => {
+  // 1. Parameter nahi diya gaya toh default use karo
+  if (value === undefined) {
+    return defaultValue;
+  }
+
+  // 2. Sirf digits accept karo
+  if (typeof value !== "string" || !/^\d+$/.test(value)) {
+    throw AppError(400, `${field} must be a valid positive integer.`);
+  }
+
+  const parsedValue = Number(value);
+
+  // 3. Number aur allowed range validate karo
+  if (
+    !Number.isSafeInteger(parsedValue) ||
+    parsedValue < 1 ||
+    parsedValue > max
+  ) {
+    throw AppError(400, `${field} must be between 1 and ${max}.`);
+  }
+
+  return parsedValue;
+};
+
+// const pageNumber = parsePaginationParam(
+  //   query.page,
+  //   "page",
+  //   1,
+  //   Number.MAX_SAFE_INTEGER,
+  // );
+
+  // const limitNumber = parsePaginationParam(query.limit, "limit", 10, 50);
+
+
+
+
+
+
+/*
+
+
+
+
+*/
