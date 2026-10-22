@@ -19,7 +19,7 @@ const app = express();
 // CORS Configuration
 app.use(
   cors({
-    origin: "http://localhost:5173", // Sirf is frontend URL ko allow karega
+    origin: ["http://127.0.0.1:5500", "http://localhost:5500"],// Sirf is frontend URL ko allow karega
     methods: ["GET", "POST", "PUT", "DELETE"], // Yeh HTTP methods allowed hain
     allowedHeaders: ["Content-Type", "Authorization"], // Yeh headers allowed hain
     credentials: true, // Cookies ya authorization tokens pass karne ke liye zaroori hai

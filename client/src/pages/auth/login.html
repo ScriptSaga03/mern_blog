@@ -4,28 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - YoBlogger</title>
-    <link rel="stylesheet" href="../../../styles.css">
+    <link rel="stylesheet" href="../../../styles.css" />
   </head>
   <body>
-
     <main class="auth-page-wrapper">
       <div class="form-container">
         <h2>Welcome Back</h2>
-        <form action="" method="post" id="loginForm">
+        <form id="loginForm">
           <div class="form-group">
             <label for="email">Email Address</label>
-            <input type="email" id="email" placeholder="john@doe.com" required />
-          </div>
-          
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" placeholder="********" required />
+            <input
+              type="email"
+              id="email"
+              placeholder="john@doe.com"
+            />
           </div>
 
-          <button type="submit" class="btn btn-signup auth-submit-btn">Log In</button>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="********"
+            />
+          </div>
+
+          <button type="submit" class="btn btn-signup auth-submit-btn">
+            Log In
+          </button>
+          <p id="respMsg" role="status" aria-live="polite" class="statusMsg"></p>
         </form>
       </div>
     </main>
 
+    <script src="../../../index.js"></script>
   </body>
 </html>
