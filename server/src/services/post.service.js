@@ -15,7 +15,16 @@ const bulkCreatePosts = async (postsData, authorId) => {
 
 // GET POSTS
 const getPublishedPosts = async (query = {}) => {
-  const { page = 1, limit = 10, category, search, sortBy = "createdAt", order="desc"} = query;
+  const {
+    page = 1,
+    limit = 10,
+    category,
+    search,
+    author,
+    tag,
+    sortBy = "createdAt",
+    order = "desc",
+  } = query;
 
   // CONVERT STRING INTO NUMBER
   const parsedPage = Number(page);
@@ -36,7 +45,7 @@ const getPublishedPosts = async (query = {}) => {
   const filter = { status: "published" };
 
   // SEARCH
-  const searchTerms = query.search ? query.search.trim() : null;
+  const searchTerms = search ? search.trim() : null;
   if (searchTerms) {
     filter.$or = [
       { title: { $regex: searchTerms, $options: "i" } },
@@ -50,14 +59,51 @@ const getPublishedPosts = async (query = {}) => {
     filter.category = { $regex: category, $options: "i" };
   }
 
-  // SORT SETUP 
-  const sortOrder  = order.toLowerCase() === "desc" ? -1 : 1;
-  
+  // TAG
+  if (tag) {
+    filter.tags = { $regex: tag, $options: "i" };
+  }
+
+  // author
+  if(author){
+    filter.author = author;
+  }
+
+  // SORT SETUP
+  const allowedFields = ["createdAt", "title", "category"];
+
+  if (!allowedFields.includes(sortBy)) {
+    throw AppError(400, "Invalid sortBy parameter.");
+  }
+
+  const normalizedOrder = order.toLowerCase();
+  let sortOrder;
+
+  switch (normalizedOrder) {
+    case "asc":
+      sortOrder = 1;
+      break;
+    case "desc":
+      sortOrder = -1;
+      break;
+    default:
+      throw AppError(400, "Invalid order parameter. Use 'asc' or 'desc'.");
+  }
+
+  console.log({
+    sortBy,
+    order,
+    normalizedOrder,
+    orderType: typeof order,
+  });
+
+
+console.log({ sortBy, sortOrder });
 
   const [posts, totalPosts] = await Promise.all([
     Post.find(filter)
       .sort({
-        [sortBy]: sortOrder
+        [sortBy]: sortOrder,
       })
       .skip(skip)
       .limit(limitNumber)

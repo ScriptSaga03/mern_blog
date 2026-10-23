@@ -114,8 +114,10 @@ const blogApp = {
 
       // 7. Show success
       this.showStatus(result.message || "Login successful!", "green");
+      setTimeout(() => {
+        window.location.href= "../../../index.html"
+      }, 3000);
       console.log("Logged-in user:", result.data);
-
     } catch (error) {
       console.log(error);
       // Network errors or invalid JSON response
@@ -128,15 +130,14 @@ const blogApp = {
   },
 
   // HANDLE Register FORM
-
   async handleRegister() {
     const name = this.elements.userNameInput.value.trim();
     const email = this.elements.userEmailInput.value.trim();
     const password = this.elements.userPassInput.value;
-  
+    const confirmPassword = document.getElementById("confirmPassword").value;
 
     // 1. Required fields
-    if (!name || !email || !password ) {
+    if (!name || !email || !password || !confirmPassword) {
       this.showStatus("Please fill all fields.", "red");
       return;
     }
@@ -172,7 +173,10 @@ const blogApp = {
       return;
     }
 
-
+    if(password  !== confirmPassword){
+      this.showStatus("Password not match. Please confirm your password.");
+      return ;
+    }
 
     try {
       this.showStatus("Creating your account...", "black");
@@ -208,10 +212,9 @@ const blogApp = {
       this.elements.registerForm.reset();
       console.log("Registered user:", result.data);
 
-      settimeout(() => {
-        window.location.href = "/src/pages/auth/login.html";
+      setTimeout(() => {
+        window.location.href = "./login.html";
       }, 2000);
-
     } catch (error) {
       console.error("Registration error:", error);
       this.showStatus(
