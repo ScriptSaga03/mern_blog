@@ -14,6 +14,10 @@ const bulkCreatePosts = async (postsData, authorId) => {
 };
 
 // GET POSTS
+const escapeRegex = (string) => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 const getPublishedPosts = async (query = {}) => {
   const {
     page = 1,
@@ -45,28 +49,31 @@ const getPublishedPosts = async (query = {}) => {
   const filter = { status: "published" };
 
   // SEARCH
-  const searchTerms = search ? search.trim() : null;
+  const searchTerms = typeof search === "string" ? escapeRegex(search.trim()) : null;
   if (searchTerms) {
     filter.$or = [
-      { title: { $regex: searchTerms, $options: "i" } },
-      { excerpt: { $regex: searchTerms, $options: "i" } },
-      { content: { $regex: searchTerms, $options: "i" } },
+      { title: new RegExp(searchTerms, "i") },
+      { excerpt: new RegExp(searchTerms, "i") },
+      { content: new RegExp(searchTerms, "i") },
     ];
   }
 
   // CATEGORY
-  if (category) {
-    filter.category = { $regex: category, $options: "i" };
+  const categoryQuery = typeof category === "string" ? escapeRegex(category.trim()) : "";
+  if (categoryQuery) {
+    filter.category = { $regex: categoryQuery, $options: "i" };
   }
 
   // TAG
-  if (tag) {
-    filter.tags = { $regex: tag, $options: "i" };
+  const tagQuery = typeof tag === "string" ? escapeRegex(tag.trim()) : "";
+  if (tagQuery) {
+    filter.tags = new RegExp(`^${tagQuery}$`, "i");
   }
 
   // author
-  if(author){
-    filter.author = author;
+  const authorQuery = typeof author === "string" ? escapeRegex(author.trim()) : "";
+  if (authorQuery) {
+    filter.author = authorQuery;
   }
 
   // SORT SETUP
@@ -90,15 +97,6 @@ const getPublishedPosts = async (query = {}) => {
       throw AppError(400, "Invalid order parameter. Use 'asc' or 'desc'.");
   }
 
-  console.log({
-    sortBy,
-    order,
-    normalizedOrder,
-    orderType: typeof order,
-  });
-
-
-console.log({ sortBy, sortOrder });
 
   const [posts, totalPosts] = await Promise.all([
     Post.find(filter)
