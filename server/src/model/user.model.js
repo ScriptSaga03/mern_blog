@@ -25,10 +25,25 @@ const userSchema = new mongoose.Schema({
         type:String,
         enum:["user","admin"],
         default:"user"
+    },
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    emailVerificationToken: {
+        type: String,
+        select: false
+    },
+    emailVerificationExpires: {
+        type: Date,
+        select: false
     }
 },{
     timestamps:true
 });
+
+// // CREATE INDEX
+// userSchema.index({email:1});
 
 
 const User = mongoose.model("User", userSchema);

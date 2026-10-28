@@ -2,17 +2,21 @@ import Post from "../model/post.model.js";
 import AppError from "../utils/AppError.js";
 
 const isPostAuthor = async (req, res, next) => {
-  const post = await Post.findById(req.params.id);
-  if (!post) {
-    return next(AppError(404, "Post not found"));
-  }
+  try {
+    const post = await Post.findById(req.params.id).select("author").lean();
 
-  if (post.author.toString() !== req.user._id.toString()) {
-    return next(AppError(403, "You are not allowed to modify this post."));
-  }
+    if (!post) {
+      return next(AppError(404, "Post not found."));
+    }
 
-  return next();
+    if (post.author.toString() !== req.user._id.toString()) {
+      return next(AppError(403, "You are not allowed to modify this post."));
+    }
+
+    return next();
+  } catch (error) {
+    return next(error);   
+  }
 };
 
-
-export {isPostAuthor};
+export { isPostAuthor };

@@ -59,6 +59,18 @@ const postSchema = new mongoose.Schema(
   }
 );
 
+// CREATE INDEXES
+postSchema.index({ createdAt: -1 });
+postSchema.index({ status: 1, author: 1 });
+postSchema.index({ status: 1, category: 1, createdAt: -1 });
+postSchema.index({ category: 1 , createdAt: -1 });
+postSchema.index({ tags: 1 });
+postSchema.index({ status: 1, createdAt: -1 });
+postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ title: 1 }); 
+postSchema.index({ title: "text", content: "text", excerpt: "text" })
+
 const Post = mongoose.model("Post", postSchema);
+
 
 export default Post;

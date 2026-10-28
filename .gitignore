@@ -13,3 +13,10 @@ build/
 # Logs
 *.log
 npm-debug.log*
+
+
+# nodemailr
+smtp_host
+smtp_port
+smtp_user
+smtp_pass

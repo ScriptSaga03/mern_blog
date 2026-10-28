@@ -2,6 +2,9 @@ import bcrypt from "bcryptjs";
 import User from "../model/user.model.js";
 import AppError from "../utils/AppError.js";
 import { generateToken } from "../utils/generateToken.js";
+import { generateEmailVerificationToken } from "../utils/emailVerificationToken.js";
+
+import { sendVerificationEmail } from "./email.service.js";
 
 const registerUser = async (userData) => {
   const { name, email, password } = userData;
@@ -16,13 +19,21 @@ const registerUser = async (userData) => {
   const salt = await bcrypt.genSalt(12);
   // 3 HASH PASSWORD
   const hashedPassword = await bcrypt.hash(password, salt);
-  // 4 CREATE NEW USER
+
+  // 4 Generate secure verification token
+  const { token, hashedToken } = generateEmailVerificationToken();
+
+  const emailVerificationExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+  // 5 CREATE NEW USER
   let user;
   try {
     user = await User.create({
       name,
       email,
       password: hashedPassword,
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires,
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -31,12 +42,19 @@ const registerUser = async (userData) => {
     throw error;
   }
 
-  // 5 SANITIZE RETURN OBJ
-  const userResponse = user.toObject();
-  //   REMOVE PASSWORD FROM RESPONSE
-  delete userResponse.password;
+  // 6 Send verification email
+  const verificationUrl = `${process.env.BACKEND_URL}/api/v1/auth/verify-email?token=${token}`;
 
-  // 6 RETURN USER
+  await sendVerificationEmail(email, verificationUrl);
+
+  // 7 SANITIZE RETURN OBJ
+  const userResponse = user.toObject();
+  //   REMOVE IMPORTANT FEILDS FROM RESPONSE
+  delete userResponse.password;
+  delete userResponse.emailVerificationToken;
+  delete userResponse.emailVerificationExpires;
+
+  // 8 RETURN USER
   return userResponse;
 };
 

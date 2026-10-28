@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email : YoBlogger</title>
+    <link rel="stylesheet" href="../../../styles.css">
+</head>
+<body>
+
+    <main class="auth-page-wrapper">
+        <div class="user-verificatin-container">
+            
+            <!-- Email Icon Graphic -->
+            <div class="verification-icon-wrapper">
+                ✉️
+            </div>
+
+            <h2>Verify your email address</h2>
+            
+            <div class="verification-text-content">
+                <p>
+                    A verification link has been sent to your email <span id="userEmail" class="highlight-email">xyz@gmail.com</span>. Please check your inbox and click the link provided to complete your account registration.
+                </p>
+                <p class="muted-note">
+                    If you don't receive the email within a few minutes, please check your spam folder.
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="verification-actions">
+                <button type="button" id="resendBtn" class="btn-signup auth-submit-btn">
+                    Resend Verification Email
+                </button>
+                
+                <div class="back-to-login">
+                    <a href="./login.html">Back to Login</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Optional JS to dynamically inject user email -->
+    <script src="../../../index.js">
+    </script>
+</body>
+</html>

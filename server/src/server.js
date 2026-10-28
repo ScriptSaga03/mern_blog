@@ -6,6 +6,7 @@ import app from "./app.js";
 import connectDB from "./config/db.js";
 import { validateEnv } from "./config/validateEnv.js";
 
+
 // DEFINE PORT
 const PORT = process.env.PORT || 3000;
 

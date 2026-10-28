@@ -1,6 +1,7 @@
 import Post from "../model/post.model.js";
 import AppError from "../utils/AppError.js";
 
+
 // BULK CREATE POSTS
 const bulkCreatePosts = async (postsData, authorId) => {
   const postsWithAuthor = postsData.map((post) => ({
@@ -71,9 +72,8 @@ const getPublishedPosts = async (query = {}) => {
   }
 
   // author
-  const authorQuery = typeof author === "string" ? escapeRegex(author.trim()) : "";
-  if (authorQuery) {
-    filter.author = authorQuery;
+  if (author && typeof author === "string" && author.trim() !== "") {
+    filter.author = author;
   }
 
   // SORT SETUP
@@ -106,6 +106,7 @@ const getPublishedPosts = async (query = {}) => {
       .skip(skip)
       .limit(limitNumber)
       .select("-__v")
+      .populate("author", "name")
       .lean(),
 
     Post.countDocuments(filter),

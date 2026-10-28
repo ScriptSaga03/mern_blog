@@ -213,7 +213,7 @@ const blogApp = {
       console.log("Registered user:", result.data);
 
       setTimeout(() => {
-        window.location.href = "./login.html";
+        window.location.href = "./emailVerification.html";
       }, 2000);
     } catch (error) {
       console.error("Registration error:", error);
