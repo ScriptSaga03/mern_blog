@@ -17,11 +17,12 @@ import {
   updatePostValidationRules,
 } from "../validators/post.validator.js";
 import { isPostAuthor } from "../middleware/isPostAuthor.middleware.js";
+import { getProductLimiter } from "../middleware/rateLimitter.middleware.js";
 
 const router = express.Router();
 
 // GET
-router.get("/", getPublishedPostsController);
+router.get("/", getProductLimiter,getPublishedPostsController);
 
 // GET POST BY ID
 router.get(

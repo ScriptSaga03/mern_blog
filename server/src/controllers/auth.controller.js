@@ -1,11 +1,16 @@
-import { loginUser, registerUser } from "../services/auth.service.js";
+import {
+  loginUserService,
+  registerUserService,
+  verifyEmailService,
+  resendVerificationEmailService,
+  resendOtpService,
+  verifyLoginOtpService,
+} from "../services/auth.service.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
-import AppError from "../utils/AppError.js";
-import crypto from "node:crypto";
-import User from "../model/user.model.js";
 
-const register = asyncHandler(async (req, res) => {
-  const user = await registerUser(req.body);
+// USER REGISTER CONTROLLER
+const registerController = asyncHandler(async (req, res) => {
+  const user = await registerUserService(req.body);
 
   return res.status(201).json({
     success: true,
@@ -15,55 +20,82 @@ const register = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       isEmailVerified: user.isEmailVerified,
+      token: user.emailVerificationToken,
     },
   });
 });
 
-// ======================= Email verification for registrain =======================
-const verifyEmail = asyncHandler(async (req, res) => {
+// VERIFY EMAIL VERIFICATION CONTROLLER
+const verifyEmailController = asyncHandler(async (req, res) => {
   const { token } = req.query;
 
-  if (!token || typeof token !== "string") {
-    throw AppError(400, "Verification token is required.");
-  }
-
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-
-  const user = await User.findOne({
-    emailVerificationToken: hashedToken,
-    emailVerificationExpires: { $gt: new Date() },
-  }).select("+emailVerificationToken +emailVerificationExpires");
-
-  if (!user) {
-    throw AppError(400, "Verification link is invalid or has expired.");
-  }
-
-  user.isEmailVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpires = undefined;
-
-  await user.save();
+  const result = await verifyEmailService(token);
 
   return res.status(200).json({
     success: true,
-    message: "Email verified successfully. You can now log in.",
+    statusCode: 200,
+    message: "✅ Email verified successfully! You can now log in.",
+    data: result,
+  });
+});
+
+// RESEND EMAIL VERIFICATION EMAIL LINK
+const resendVerificationEmailController = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const result = await resendVerificationEmailService(email);
+
+  return res.status(200).json({
+    success: true,
+    message: result.message,
   });
 });
 
 // ======================= Login =======================
-const login = asyncHandler(async (req, res) => {
-  const { user, token } = await loginUser(req.body);
+const loginController = asyncHandler(async (req, res) => {
+  const result = await loginUserService(req.body);
 
   return res.status(200).json({
     success: true,
-    message: "Login successful.",
+    statusCode: 200,
+    message:
+      "✅ Credentials verified. An OTP has been sent to your registered email.",
+    data: result,
+  });
+});
+
+// VERIFY LOGIN OTP CONTROLLER
+const verifyLoginOtpController = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    throw AppError(400, "Email and OTP are required.");
+  }
+
+  const { user, token } = await verifyLoginOtpService({ email, otp });
+
+  return res.status(200).json({
+    success: true,
+    message: "Login successful via OTP.",
     data: user,
     token,
   });
 });
 
+// RESEND OTP
+
+const resendLoginOtpController = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const result = await resendOtpService(email);
+
+  return res.status(200).json({
+    success: true,
+    message: result.message,
+  });
+});
+
 // ======================= Get Current User =======================
-const getMe = asyncHandler(async (req, res) => {
+const getMeController = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Authentication successful.",
@@ -74,7 +106,7 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 // ======================= Admin Test =======================
-const adminTest = asyncHandler(async (req, res) => {
+const adminTestController = asyncHandler(async (req, res) => {
   return res.status(200).json({
     success: true,
     message: "Admin authorization successful.",
@@ -84,4 +116,13 @@ const adminTest = asyncHandler(async (req, res) => {
   });
 });
 
-export { register, login, getMe, adminTest, verifyEmail };
+export {
+  registerController,
+  loginController,
+  getMeController,
+  adminTestController,
+  verifyEmailController,
+  resendVerificationEmailController,
+  verifyLoginOtpController,
+  resendLoginOtpController,
+};

@@ -56,7 +56,33 @@ const loginValidationRules = [
 ]
 
 
-export {registerValidationRules, loginValidationRules}
+
+// ======================= Email Validation Rules =======================
+const emailValidationRules = [
+   body("email")
+        .trim()
+        .notEmpty()
+        .withMessage("Email is required!")
+        .bail()
+        .isEmail()
+        .withMessage("Please provide a valid email address!")
+        .normalizeEmail()
+]
+
+const otpValidationRules = [
+  body("otp")
+    .trim()
+    .notEmpty()
+    .withMessage("OTP is required!")
+    .bail()
+    .isNumeric()
+    .withMessage("OTP must contain only numbers!")
+    .bail()
+    .isLength({ min: 6, max: 6 })
+    .withMessage("OTP must be exactly 6 digits long!"),
+];
+
+export {registerValidationRules, loginValidationRules, emailValidationRules, otpValidationRules}
 
 
 

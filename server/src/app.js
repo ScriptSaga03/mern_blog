@@ -12,9 +12,13 @@ import { pageNotFound } from "./middleware/unmatchedRouteHandler.js";
 // IMPORT FILES
 import authRoutes from "./routes/auth.routes.js";
 import postRoutes from './routes/post.routes.js';
+import { globalLimiter } from "./middleware/rateLimitter.middleware.js";
 
 // CREATE EXPRESS APP
 const app = express();
+
+// TRUST PROXY SETTING (RENDER , HEROKU OR NGINX) 
+app.set('trust proxy' , 1)
 
 // CORS Configuration
 app.use(
@@ -33,7 +37,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 
+
 // APPLICATION LEVEL MIDDLEWARE
+app.use(globalLimiter)
 
 
 // ROUTING
