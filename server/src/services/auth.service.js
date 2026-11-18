@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import User from "../model/user.model.js";
 import AppError from "../utils/AppError.js";
 import { generateToken } from "../utils/generateToken.js";
+import { generateLoginChallenge } from "../utils/generateLoginChallenge.js";
 import { generateEmailVerificationToken } from "../utils/emailVerificationToken.js";
 
 import { sendMails } from "./email.service.js";
@@ -187,48 +188,68 @@ const resendVerificationEmailService = async (email) => {
 };
 
 // ================================================ Login Services ================================================
+
 const loginUserService = async (userData) => {
   const { email, password } = userData;
 
-  // 1 FETCH USER
-  const user = await User.findOne({ email }).select("+password");
+  // 1. FETCH USER
+  const user = await User.findOne({ email }).select(
+    "+password +loginOtpAttempts +loginOtpLockedUntil",
+  );
+
   if (!user) {
     throw AppError(401, "Invalid email or password!");
   }
 
-  // 2 COMPARE PASSWORD
+  // 2. VERIFY PASSWORD
   const isPasswordValid = await bcrypt.compare(password, user.password);
+
   if (!isPasswordValid) {
     throw AppError(401, "Invalid email or password!");
   }
 
-  // IS EMAIL ALREADY VERIFIED
+  // 3. CHECK EMAIL VERIFICATION
   if (!user.isEmailVerified) {
-    throw AppError(403, "Please verify your email before logging in,");
+    throw AppError(403, "Please verify your email before logging in.");
   }
 
-  // GENERATE OTP AND IT'S HASH
-  const { otp, otpHash } = generateLoginOtp();
+  // 4. CHECK ACTIVE OTP LOCKOUT
+  if (user.loginOtpLockedUntil && user.loginOtpLockedUntil > new Date()) {
+    const remainingTime = Math.ceil(
+      (user.loginOtpLockedUntil.getTime() - Date.now()) / 1000,
+    );
 
-  // GENERATE OTP HASH AND EXPIRY
-  user.loginOtpHash = otpHash;
-  user.loginOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    throw AppError(
+      429,
+      `Too many attempts. Try again after ${Math.ceil(remainingTime / 60)} minutes.`,
+    );
+  }
+
+  // 5. RESET EXPIRED LOCKOUT
   user.loginOtpAttempts = 0;
   user.loginOtpLockedUntil = undefined;
 
+  // 6. GENERATE OTP AND CHALLENGE
+  const { otp, otpHash } = generateLoginOtp();
+  const { challengeId, challengeHash } = generateLoginChallenge();
+
+  user.loginOtpHash = otpHash;
+  user.loginOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+  user.loginChallengeHash = challengeHash;
+
   await user.save({ validateBeforeSave: false });
 
-  // SEND EMAIL
+  // 7. SEND OTP EMAIL
   try {
-    const templateData = path.join(
+    const templatePath = path.join(
       __dirname,
       "..",
       "views",
       "templates",
       "loginOtpPage.ejs",
     );
-    // convert ejs into html
-    const htmlContent = await ejs.renderFile(templateData, {
+
+    const htmlContent = await ejs.renderFile(templatePath, {
       name: user.name,
       otp,
       expiresIn: "10 minutes",
@@ -241,108 +262,404 @@ const loginUserService = async (userData) => {
       template: htmlContent,
     });
   } catch (error) {
-    console.error("❌ LOGIN ERROR:", error);
-    // Invalidate the OTP if email delivery fails
     user.loginOtpHash = undefined;
     user.loginOtpExpires = undefined;
-    user.loginOtpAttempts = 0;
+    user.loginChallengeHash = undefined;
 
     await user.save({ validateBeforeSave: false });
+
     throw AppError(500, "Unable to send login OTP. Please try again.");
   }
 
-  // Return non-sensitive payload for Step 2
+  // 8. RETURN LOGIN CHALLENGE
   return {
-    userId: user._id,
     email: user.email,
+    challengeId,
   };
 };
 
+// ========================================== VERIFY LOGIN OTP SERVICE ==========================================
 
-// verifyLoginOtpService
-const verifyLoginOtpService = async ({ email, otp }) => {
-  // 1. Fetch user with OTP fields
+// const verifyLoginOtpService = async ({ email, otp, challengeId }) => {
+//   // 1. Validate required inputs
+//   if (!challengeId || !otp) {
+//     throw AppError(400, "OTP and login challenge are required.");
+//   }
+
+//   // 2. Find user with OTP and challenge fields
+//   const user = await User.findOne({ email }).select(
+//     "+loginOtpHash +loginOtpExpires +loginOtpAttempts +loginOtpLockedUntil +loginChallengeHash",
+//   );
+
+//   if (!user || !user.loginOtpHash || !user.loginChallengeHash) {
+//     throw AppError(400, "Invalid or expired login challenge.");
+//   }
+
+//   // 3. Check OTP expiry
+//   if (!user.loginOtpExpires || user.loginOtpExpires <= new Date()) {
+//     throw AppError(400, "Invalid or expired OTP.");
+//   }
+
+//   // 4. Hash incoming challenge ID
+//   const submittedChallengeHash = crypto
+//     .createHash("sha256")
+//     .update(challengeId)
+//     .digest("hex");
+
+//   // 4. Compare challenge hashes safely
+//   const isChallengeValid = crypto.timingSafeEqual(
+//     Buffer.from(submittedChallengeHash, "hex"),
+//     Buffer.from(user.loginChallengeHash, "hex"),
+//   );
+
+//   if (!isChallengeValid) {
+//     throw AppError(400, "Invalid or expired login challenge.");
+//   }
+
+//   // 6. Check temporary lock
+//   if (user.loginOtpLockedUntil && user.loginOtpLockedUntil > new Date()) {
+//     throw AppError(429, "Too many attempts. Try again later.");
+//   }
+
+//   // 7. Generate hash of submitted OTP
+//   const submittedOtpHash = crypto
+//     .createHmac("sha256", process.env.OTP_SECRET)
+//     .update(otp)
+//     .digest("hex");
+
+//   // 8. Compare OTP hashes safely
+//   const isOtpValid = crypto.timingSafeEqual(
+//     Buffer.from(submittedOtpHash, "hex"),
+//     Buffer.from(user.loginOtpHash, "hex"),
+//   );
+
+//   // 9. Handle incorrect OTP atomically
+//   if (!isOtpValid) {
+//     const now = new Date();
+
+//     let updatedUser = await User.findOneAndUpdate(
+//       {
+//         _id: user._id,
+//         loginOtpHash: user.loginOtpHash,
+//         loginChallengeHash: user.loginChallengeHash,
+//         loginOtpExpires: { $gt: now },
+//         loginOtpAttempts: { $lt: 5 },
+//         $or: [
+//           { loginOtpLockedUntil: { $exists: false } },
+//           { loginOtpLockedUntil: null },
+//           { loginOtpLockedUntil: { $lte: now } },
+//         ],
+//       },
+//       [
+//         {
+//           $set: {
+//             loginOtpAttempts: {
+//               $add: [{ $ifNull: ["$loginOtpAttempts", 0] }, 1],
+//             },
+//           },
+//         },
+//         {
+//           $set: {
+//             loginOtpLockedUntil: {
+//               $cond: [
+//                 { $gte: ["$loginOtpAttempts", 5] },
+//                 new Date(now.getTime() + 15 * 60 * 1000),
+//                 "$loginOtpLockedUntil",
+//               ],
+//             },
+//           },
+//         },
+//       ],
+//       {
+//         returnDocument: "after",
+//         updatePipeline: true,
+//       },
+//     ).select("+loginOtpAttempts +loginOtpLockedUntil");
+
+//     if (!updatedUser) {
+//       throw AppError(429, "Too many incorrect attempts. Try again later.");
+//     }
+
+//     if (updatedUser.loginOtpAttempts >= 5) {
+//       throw AppError(
+//         429,
+//         "Too many incorrect attempts. Try again after 15 minutes.",
+//       );
+//     }
+
+//     throw AppError(400, "Invalid or expired OTP.");
+//   }
+
+//   // 10. Consume OTP and challenge atomically
+//   const now = new Date();
+
+//   const verifiedUser = await User.findOneAndUpdate(
+//     {
+//       _id: user._id,
+//       loginOtpHash: user.loginOtpHash,
+//       loginChallengeHash: user.loginChallengeHash,
+//       loginOtpExpires: { $gt: now },
+//       loginOtpAttempts: { $lt: 5 },
+//       $or: [
+//         { loginOtpLockedUntil: { $exists: false } },
+//         { loginOtpLockedUntil: null },
+//         { loginOtpLockedUntil: { $lte: now } },
+//       ],
+//     },
+//     {
+//       $unset: {
+//         loginOtpHash: 1,
+//         loginOtpExpires: 1,
+//         loginChallengeHash: 1,
+//         loginOtpLockedUntil: 1,
+//       },
+//       $set: {
+//         loginOtpAttempts: 0,
+//       },
+//     },
+//     {
+//       new: true,
+//     },
+//   ).select("name email role");
+
+//   if (!verifiedUser) {
+//     throw AppError(400, "Invalid or expired login challenge.");
+//   }
+
+//   // 11. Generate JWT only after successful verification
+//   const token = generateToken(verifiedUser);
+
+//   return {
+//     user: {
+//       userId: verifiedUser._id,
+//       name: verifiedUser.name,
+//       email: verifiedUser.email,
+//       role: verifiedUser.role,
+//     },
+//     token,
+//   };
+// };
+
+const verifyLoginOtpService = async ({ email, otp, challengeId }) => {
+  // 1. Validate required inputs
+  if (!challengeId || !otp) {
+    throw AppError(400, "OTP and login challenge are required.");
+  }
+
+  // 2. Find user with OTP and challenge fields
   const user = await User.findOne({ email }).select(
-    "+loginOtpHash +loginOtpExpires +loginOtpAttempts +loginOtpLockedUntil"
+    "+loginOtpHash +loginOtpExpires +loginOtpAttempts +loginOtpLockedUntil +loginChallengeHash",
   );
 
-  if (!user) {
-    throw AppError(404, "User not found.");
+  if (!user || !user.loginOtpHash || !user.loginChallengeHash) {
+    throw AppError(400, "Invalid or expired login challenge.");
   }
 
-  // 2. Check if locked due to multiple failed attempts
-  if (user.loginOtpLockedUntil && user.loginOtpLockedUntil > Date.now()) {
-    throw AppError(429, "Account temporarily locked due to too many failed OTP attempts. Try again later.");
+  // 3. Hash incoming challenge ID
+  const submittedChallengeHash = crypto
+    .createHash("sha256")
+    .update(challengeId)
+    .digest("hex");
+
+  // 4. Compare challenge hashes safely
+  const isChallengeValid = crypto.timingSafeEqual(
+    Buffer.from(submittedChallengeHash, "hex"),
+    Buffer.from(user.loginChallengeHash, "hex"),
+  );
+
+  if (!isChallengeValid) {
+    throw AppError(400, "Invalid or expired login challenge.");
   }
 
-  // 3. Check if OTP is expired
-  if (!user.loginOtpExpires || user.loginOtpExpires < Date.now()) {
-    throw AppError(400, "OTP has expired. Please request a new one.");
+  // 5. Check temporary lock
+  if (
+    user.loginOtpAttempts >= 5 ||
+    (user.loginOtpLockedUntil &&
+      user.loginOtpLockedUntil > new Date())
+  ) {
+    throw AppError(429, "Too many attempts. Try again later.");
   }
 
-  // 4. Hash incoming OTP to compare
-  const incomingOtpHash = crypto
+  // 6. Check OTP expiry
+  if (!user.loginOtpExpires || user.loginOtpExpires <= new Date()) {
+    throw AppError(400, "Invalid or expired OTP.");
+  }
+
+  // 7. Generate hash of submitted OTP
+  const submittedOtpHash = crypto
     .createHmac("sha256", process.env.OTP_SECRET)
     .update(otp)
     .digest("hex");
 
-  // 5. Compare hashes
-  if (incomingOtpHash !== user.loginOtpHash) {
-    user.loginOtpAttempts += 1;
+  // 8. Compare OTP hashes safely
+  const isOtpValid = crypto.timingSafeEqual(
+    Buffer.from(submittedOtpHash, "hex"),
+    Buffer.from(user.loginOtpHash, "hex"),
+  );
 
-    // Lock account if attempts exceed 5
-    if (user.loginOtpAttempts >= 5) {
-      user.loginOtpLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins lock
+  // 9. Handle incorrect OTP atomically
+  if (!isOtpValid) {
+    const now = new Date();
+
+    let updatedUser = await User.findOneAndUpdate(
+      {
+        _id: user._id,
+        loginOtpHash: user.loginOtpHash,
+        loginChallengeHash: user.loginChallengeHash,
+        loginOtpExpires: { $gt: now },
+        loginOtpAttempts: { $lt: 5 },
+        $or: [
+          { loginOtpLockedUntil: { $exists: false } },
+          { loginOtpLockedUntil: null },
+          { loginOtpLockedUntil: { $lte: now } },
+        ],
+      },
+      [
+        {
+          $set: {
+            loginOtpAttempts: {
+              $add: [{ $ifNull: ["$loginOtpAttempts", 0] }, 1],
+            },
+          },
+        },
+        {
+          $set: {
+            loginOtpLockedUntil: {
+              $cond: [
+                { $gte: ["$loginOtpAttempts", 5] },
+                new Date(now.getTime() + 15 * 60 * 1000),
+                "$loginOtpLockedUntil",
+              ],
+            },
+          },
+        },
+      ],
+      {
+        returnDocument: "after",
+        updatePipeline: true,
+      },
+    ).select("+loginOtpAttempts +loginOtpLockedUntil");
+
+    if (!updatedUser) {
+      throw AppError(429, "Too many incorrect attempts. Try again later.");
     }
-    await user.save({ validateBeforeSave: false });
 
-    throw AppError(400, "Invalid OTP. Please try again.");
+    if (updatedUser.loginOtpAttempts >= 5) {
+      throw AppError(
+        429,
+        "Too many incorrect attempts. Try again after 15 minutes.",
+      );
+    }
+
+    throw AppError(400, "Invalid or expired OTP.");
   }
 
-  // 6. Clear OTP fields upon successful verification
-  user.loginOtpHash = undefined;
-  user.loginOtpExpires = undefined;
-  user.loginOtpAttempts = 0;
-  user.loginOtpLockedUntil = undefined;
-  await user.save({ validateBeforeSave: false });
+  // 10. Consume OTP and challenge atomically
+  const now = new Date();
 
-  // 7. Generate final JWT Token
-  const token = generateToken(user);
+  const verifiedUser = await User.findOneAndUpdate(
+    {
+      _id: user._id,
+      loginOtpHash: user.loginOtpHash,
+      loginChallengeHash: user.loginChallengeHash,
+      loginOtpExpires: { $gt: now },
+      loginOtpAttempts: { $lt: 5 },
+      $or: [
+        { loginOtpLockedUntil: { $exists: false } },
+        { loginOtpLockedUntil: null },
+        { loginOtpLockedUntil: { $lte: now } },
+      ],
+    },
+    {
+      $unset: {
+        loginOtpHash: 1,
+        loginOtpExpires: 1,
+        loginChallengeHash: 1,
+        loginOtpLockedUntil: 1,
+      },
+      $set: {
+        loginOtpAttempts: 0,
+      },
+    },
+    {
+      new: true,
+    },
+  ).select("name email role");
+
+  if (!verifiedUser) {
+    throw AppError(400, "Invalid or expired login challenge.");
+  }
+
+  // 11. Generate JWT only after successful verification
+  const token = generateToken(verifiedUser);
 
   return {
     user: {
-      userId: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      userId: verifiedUser._id,
+      name: verifiedUser.name,
+      email: verifiedUser.email,
+      role: verifiedUser.role,
     },
     token,
   };
 };
 
+// ************************************************ RESEND OTP SERVICE *********************************************************
 
-
-// RESEND OTP SERVICE
-const resendOtpService = async (email) => {
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw AppError(404, "User with this email does not exist");
+const resendOtpService = async (email, challengeId) => {
+  // 1. Validate challenge
+  if (!challengeId) {
+    throw AppError(400, "Login challenge is required.");
   }
 
-  // Check if email is verified first
+  // 2. Find user and explicitly select security fields
+  const user = await User.findOne({ email }).select(
+    "+loginOtpHash +loginOtpExpires +loginOtpAttempts +loginOtpLockedUntil +loginChallengeHash",
+  );
+
+  if (!user || !user.loginChallengeHash || !user.loginOtpHash) {
+    throw AppError(400, "Invalid or expired login challenge.");
+  }
+
+  // 3. Check email verification
   if (!user.isEmailVerified) {
-    throw AppError(403, "Please verify your email before logging in.");
+    throw AppError(400, "Invalid or expired login challenge.");
   }
 
-  //  GENERATE NEW OTP
+  // 4. Verify challenge ID
+  const submittedChallengeHash = crypto
+    .createHash("sha256")
+    .update(challengeId)
+    .digest("hex");
+
+  const isChallengeValid = crypto.timingSafeEqual(
+    Buffer.from(submittedChallengeHash, "hex"),
+    Buffer.from(user.loginChallengeHash, "hex"),
+  );
+
+  if (!isChallengeValid) {
+    throw AppError(400, "Invalid or expired login challenge.");
+  }
+
+  // 5. Check account lock
+  if (user.loginOtpLockedUntil && user.loginOtpLockedUntil > new Date()) {
+    throw AppError(429, "Too many attempts. Try again later.");
+  }
+
+  // 6. Check existing OTP expiry
+  if (!user.loginOtpExpires || user.loginOtpExpires <= new Date()) {
+    throw AppError(400, "Login challenge expired. Please login again.");
+  }
+
+  // 7. Generate new OTP
   const { otp, otpHash } = generateLoginOtp();
-  // GENERATE OTP HASH AND EXPIRY
+
   user.loginOtpHash = otpHash;
   user.loginOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
-  user.loginOtpAttempts = 0;
-  user.loginOtpLockedUntil = undefined;
+
   await user.save({ validateBeforeSave: false });
 
+  // 8. Send new OTP
   try {
     const templatePath = path.join(
       __dirname,
@@ -361,19 +678,23 @@ const resendOtpService = async (email) => {
     await sendMails({
       email: user.email,
       subject: "Your New Login OTP - YoBlogger",
-      message: `Your new login OTP is ${otp}. It expires in 10 minutes.`,
+      message: `Your new login OTP is ${otp}. It expires in 10 minutes. Do not share this code with anyone.`,
       template: htmlContent,
     });
   } catch (error) {
+    // Invalidate pending login challenge if email fails
     user.loginOtpHash = undefined;
     user.loginOtpExpires = undefined;
-    user.loginOtpAttempts = 0;
-    user.loginOtpLockedUntil = undefined;
+    user.loginChallengeHash = undefined;
+
     await user.save({ validateBeforeSave: false });
+
     throw AppError(500, "Unable to send new OTP. Please try again.");
   }
 
-  return { message: "New login OTP sent successfully to your email." };
+  return {
+    message: "New login OTP sent successfully to your email.",
+  };
 };
 
 // EXPORT
@@ -383,5 +704,5 @@ export {
   verifyEmailService,
   resendVerificationEmailService,
   resendOtpService,
-  verifyLoginOtpService
+  verifyLoginOtpService,
 };

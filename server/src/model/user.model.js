@@ -56,16 +56,16 @@ const userSchema = new mongoose.Schema(
     loginOtpLockedUntil: {
       type: Date,
       select: false,
-    }
+    },
+    loginChallengeHash: {
+      type: String,
+      select: false,
+    },
   },
   {
     timestamps: true,
   },
 );
-
-// // CREATE INDEX
-// userSchema.index({email:1});
-
 const User = mongoose.model("User", userSchema);
 
 export default User;

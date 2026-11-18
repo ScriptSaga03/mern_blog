@@ -10,8 +10,7 @@ const registerValidationRules = [
     .withMessage("Name must be between 3 and 50 characters!")
     .bail()
     .isAlpha("en-US", { ignore: " " })
-    .withMessage("Name must contain only letters and spaces!")
-    ,
+    .withMessage("Name must contain only letters and spaces!"),
   body("email")
     .trim()
     .notEmpty()
@@ -39,35 +38,30 @@ const registerValidationRules = [
     ),
 ];
 
-
 // ======================= Login Validation Rules =======================
 const loginValidationRules = [
   body("email")
-        .trim()
-        .notEmpty()
-        .withMessage("Email is required!")
-        .bail()
-        .isEmail()
-        .withMessage("Please provide a valid email address!")
-        .normalizeEmail(),
-  body("password")
-        .notEmpty()
-        .withMessage("Password is required!")
-]
-
-
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required!")
+    .bail()
+    .isEmail()
+    .withMessage("Please provide a valid email address!")
+    .normalizeEmail(),
+  body("password").notEmpty().withMessage("Password is required!"),
+];
 
 // ======================= Email Validation Rules =======================
 const emailValidationRules = [
-   body("email")
-        .trim()
-        .notEmpty()
-        .withMessage("Email is required!")
-        .bail()
-        .isEmail()
-        .withMessage("Please provide a valid email address!")
-        .normalizeEmail()
-]
+  body("email")
+    .trim()
+    .notEmpty()
+    .withMessage("Email is required!")
+    .bail()
+    .isEmail()
+    .withMessage("Please provide a valid email address!")
+    .normalizeEmail(),
+];
 
 const otpValidationRules = [
   body("otp")
@@ -80,19 +74,31 @@ const otpValidationRules = [
     .bail()
     .isLength({ min: 6, max: 6 })
     .withMessage("OTP must be exactly 6 digits long!"),
+    
 ];
 
-export {registerValidationRules, loginValidationRules, emailValidationRules, otpValidationRules}
+
+const challengeIdValidationRules = [
+  body("challengeId")
+    .trim()
+    .notEmpty()
+    .withMessage("Login challenge ID is required!")
+    .bail()
+    .isLength({ min: 64, max: 64 })
+    .withMessage("Invalid login challenge ID!")
+    .bail()
+    .isHexadecimal()
+    .withMessage("Login challenge ID must be hexadecimal!"),
+];
 
 
-
-
-
-
-
-
-
-
+export {
+  registerValidationRules,
+  loginValidationRules,
+  emailValidationRules,
+  otpValidationRules,
+  challengeIdValidationRules
+};
 
 /*
 .matches(/^[a-zA-Z\s]+$/)    // .isAlpha("en-US", { ignore: " " })  "en-US" → English alphabet / { ignore: " " } → spaces ko ignore karo

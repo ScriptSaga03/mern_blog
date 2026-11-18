@@ -21,7 +21,7 @@ const createLimiter = (windowMs, maxRequests, errorMessage) => {
 // REGISTER LIMITER
 const registerLimiter = createLimiter(
   10 * 60 * 1000,
-  3,
+  5,
   "Too many requests! Please try after 10 mins",
 );
 
@@ -44,13 +44,13 @@ const loginLimiter = createLimiter(
 
 // VERIFY OTP 
 const verifyOTPLimiter  = createLimiter(
-  10 * 60 * 1000,
+  15 * 60 * 1000,
   5,
   "Too many requests! Please try after 15 mins",
 );
 
 const resendOTPLimiter  = createLimiter(
-  10 * 60 * 1000,
+  15 * 60 * 1000,
   5,
   "Too many requests! Please try after 15 mins",
 );

@@ -247,50 +247,50 @@ export {
 /*
 
 
-If you want to validate the pagination parameters more strictly, you can create a utility function to handle this. Here's an example of how you might implement such a function:
+// If you want to validate the pagination parameters more strictly, you can create a utility function to handle this. Here's an example of how you might implement such a function:
 
-const parsePaginationParam = (value, field, defaultValue, max) => {
-  // 1. Parameter nahi diya gaya toh default use karo
-  if (value === undefined) {
-    return defaultValue;
-  }
+// const parsePaginationParam = (value, field, defaultValue, max) => {
+//   // 1. Parameter nahi diya gaya toh default use karo
+//   if (value === undefined) {
+//     return defaultValue;
+//   }
 
-  // 2. Sirf digits accept karo
-  if (typeof value !== "string" || !/^\d+$/.test(value)) {
-    throw AppError(400, `${field} must be a valid positive integer.`);
-  }
+//   // 2. Sirf digits accept karo
+//   if (typeof value !== "string" || !/^\d+$/.test(value)) {
+//     throw AppError(400, `${field} must be a valid positive integer.`);
+//   }
 
-  const parsedValue = Number(value);
+//   const parsedValue = Number(value);
 
-  // 3. Number aur allowed range validate karo
-  if (
-    !Number.isSafeInteger(parsedValue) ||
-    parsedValue < 1 ||
-    parsedValue > max
-  ) {
-    throw AppError(400, `${field} must be between 1 and ${max}.`);
-  }
+//   // 3. Number aur allowed range validate karo
+//   if (
+//     !Number.isSafeInteger(parsedValue) ||
+//     parsedValue < 1 ||
+//     parsedValue > max
+//   ) {
+//     throw AppError(400, `${field} must be between 1 and ${max}.`);
+//   }
 
-  return parsedValue;
-};
+//   return parsedValue;
+// };
 
-// const pageNumber = parsePaginationParam(
-  //   query.page,
-  //   "page",
-  //   1,
-  //   Number.MAX_SAFE_INTEGER,
-  // );
+// // const pageNumber = parsePaginationParam(
+//   //   query.page,
+//   //   "page",
+//   //   1,
+//   //   Number.MAX_SAFE_INTEGER,
+//   // );
 
-  // const limitNumber = parsePaginationParam(query.limit, "limit", 10, 50);
-
-
+//   // const limitNumber = parsePaginationParam(query.limit, "limit", 10, 50);
 
 
 
-
-/*
-
+// */
 
 
+// /*
 
-*/
+
+
+
+// */

@@ -10,6 +10,7 @@ import {
   verifyLoginOtpController,
 } from "../controllers/auth.controller.js";
 import {
+  challengeIdValidationRules,
   emailValidationRules,
   loginValidationRules,
   otpValidationRules,
@@ -40,32 +41,6 @@ router.post(
   registerController,
 );
 
-// router.post("/api/test-email", async (req, res) => {
-//   try {
-//     const { toEmail } = req.body;
-
-//     if (!toEmail) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Recipient email is required.",
-//       });
-//     }
-
-//     await sendVerificationEmail(toEmail);
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Test email sent successfully.",
-//     });
-//   } catch (error) {
-//     console.error("Email sending failed:", error.message);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to send test email.",
-//     });
-//   }
-// });
 
 // VERIFY EMAIL
 router.get("/verify-email", verifyEmailController);
@@ -89,9 +64,10 @@ router.post(
 
 router.post(
   "/verify-login-otp",
-  verifyOTPLimiter,
+  // verifyOTPLimiter,
   emailValidationRules,
   otpValidationRules,
+  challengeIdValidationRules,
   validationMiddleware,
   verifyLoginOtpController,
 );
@@ -101,6 +77,7 @@ router.post(
   "/resend-login-otp",
   resendOTPLimiter,
   emailValidationRules,
+  challengeIdValidationRules,
   validationMiddleware,
   resendLoginOtpController,
 );

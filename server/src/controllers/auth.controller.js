@@ -20,7 +20,6 @@ const registerController = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       isEmailVerified: user.isEmailVerified,
-      token: user.emailVerificationToken,
     },
   });
 });
@@ -66,27 +65,23 @@ const loginController = asyncHandler(async (req, res) => {
 
 // VERIFY LOGIN OTP CONTROLLER
 const verifyLoginOtpController = asyncHandler(async (req, res) => {
-  const { email, otp } = req.body;
-
-  if (!email || !otp) {
-    throw AppError(400, "Email and OTP are required.");
-  }
-
-  const { user, token } = await verifyLoginOtpService({ email, otp });
+  const { user, token } = await verifyLoginOtpService(req.body);
 
   return res.status(200).json({
     success: true,
-    message: "Login successful via OTP.",
-    data: user,
-    token,
+    message: "Login successful. OTP verified.",
+    data: {
+      user,
+      token,
+    },
   });
 });
 
 // RESEND OTP
-
 const resendLoginOtpController = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const result = await resendOtpService(email);
+  const { email, challengeId } = req.body;
+
+  const result = await resendOtpService(email, challengeId);
 
   return res.status(200).json({
     success: true,

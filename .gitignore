@@ -15,8 +15,18 @@ build/
 npm-debug.log*
 
 
+# DB
+PORT
+MONGO_URI
+
+# JWT
+JWT_SECRET_KEY
+JWT_EXPIRED_IN
+
 # nodemailr
-smtp_host
-smtp_port
-smtp_user
-smtp_pass
+SMTP_HOST
+SMTP_PORT
+EMAIL_USER
+EMAIL_PASS
+BACKEND_URL
+OTP_SECRET
